@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 from .CRUD import create, delete, edit, search
+from .displayGraph import display_graph_window
 
 #Hàm tạo giao diện
 def create_display_window(data, rows_per_page=10):
@@ -241,6 +242,10 @@ def create_display_window(data, rows_per_page=10):
 
     delete_button = tk.Button(crud_search_frame, text="Delete", command=handle_delete)
     delete_button.pack(side=tk.LEFT, padx=5, pady=5)
+    
+    # Tạo nút "Xem biểu đồ"
+    graph_button = tk.Button(crud_search_frame, text="Xem biểu đồ", command=lambda: display_graph_window(data))
+    graph_button.pack(side=tk.LEFT, padx=5, pady=5)
 
     # Tạo các nút search
     search_controls_frame = tk.Frame(crud_search_frame)
