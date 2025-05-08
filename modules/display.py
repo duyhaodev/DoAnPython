@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
-from .CRUD import create, delete, edit, search
+from .CRUD import create, delete, edit, search, sort_data, filter_data
 
 #Hàm tạo giao diện
 def create_display_window(data, rows_per_page=10):
@@ -154,8 +154,8 @@ def create_display_window(data, rows_per_page=10):
     search_tree.pack(fill=tk.BOTH, expand=True)
     # -- Kết thúc Treeview tìm kiếm --
 
-    # -- Các hàm xử lý --
-    # Ham xử lý khi nhấn nút Create
+    # -- CÁC HÀM XỬ LÝ --
+    # Hàm xử lý khi nhấn nút Create
     def handle_create():
         nonlocal data
 
@@ -183,7 +183,8 @@ def create_display_window(data, rows_per_page=10):
 
         # Cập nhật Treeview để hiển thị dữ liệu mới
         load_page(current_page.get())
-
+    
+    # Hàm xử lý khi nhấn nút edit
     def handle_edit():
         nonlocal data
 
@@ -204,6 +205,7 @@ def create_display_window(data, rows_per_page=10):
         # Cập nhật Treeview để hiển thị dữ liệu mới
         load_page(current_page.get())
 
+    # Hàm xử lý khi nhấn nút Tìm kiếm
     def handle_search():
         # Lấy giá trị từ Combobox và Entry
         search_field = search_combobox.get()
@@ -227,7 +229,51 @@ def create_display_window(data, rows_per_page=10):
         except ValueError as e:
             messagebox.showerror("Lỗi", str(e))
 
-    # Thao tác CRUD và search
+    # Hàm xử lý khi nhấn nút Sắp xếp
+    def handle_sort():
+        # Lấy giá trị từ Combobox
+        field = sort_field_cb.get()
+        ascending = sort_order_cb.get() == "Tăng dần"
+        # Kiểm tra nếu chưa chọn trường hoặc không hợp lệ
+        if field not in data.columns:
+            messagebox.showerror("Lỗi", "Vui lòng chọn trường hợp lệ.")
+            return
+
+        try:
+            # Sắp xếp bản sao của dữ liệu gốc (không làm thay đổi tree chính)
+            sorted_data = sort_data(data.copy(), field, ascending)
+
+            # Xóa dữ liệu cũ trong search_tree
+            search_tree.delete(*search_tree.get_children())
+
+            # Thêm dữ liệu đã sắp xếp vào search_tree
+            for _, row in sorted_data.iterrows():
+                search_tree.insert("", tk.END, values=list(row))
+        except ValueError as e:
+            messagebox.showerror("Lỗi", str(e))
+
+    # Hàm xử lý khi nhấn "Lọc"
+    def handle_filter(): 
+
+        field = filter_field_cb.get()
+        operator = filter_op_cb.get()
+        value = filter_value_entry.get()
+
+        # Kiểm tra đầu vào
+        if field == "Chọn trường" or not value:
+            messagebox.showerror("Lỗi", "Vui lòng chọn trường và nhập giá trị.")
+            return
+        try:
+            filtered = filter_data(data.copy(), field, operator, value)
+            # Xóa kết quả cũ
+            search_tree.delete(*search_tree.get_children())
+            # Hiển thị kết quả lọc
+            for _, row in filtered.iterrows():
+                search_tree.insert("", tk.END, values=list(row))
+        except ValueError as e:
+            messagebox.showerror("Lỗi", str(e))
+
+    # Thao tác CRUD search, sắp xếp, lọc
     # Tạo Frame chứa các nút CRUD
     crud_search_frame = tk.Frame(root)
     crud_search_frame.pack(fill=tk.X)
@@ -245,7 +291,6 @@ def create_display_window(data, rows_per_page=10):
     # Tạo các nút search
     search_controls_frame = tk.Frame(crud_search_frame)
     search_controls_frame.pack(side=tk.RIGHT, padx=10, pady=10)
-
     # Label "Tìm kiếm"
     search_label = tk.Label(search_controls_frame, text="Tìm kiếm")
     search_label.pack(side=tk.LEFT, padx=5)
@@ -268,7 +313,46 @@ def create_display_window(data, rows_per_page=10):
     search_button = tk.Button(search_controls_frame, text="Tìm kiếm", command=handle_search)
     search_button.pack(side=tk.LEFT, padx=5)
 
+    # Tạo các nút sắp xếp
+    sort_controls_frame = tk.Frame(crud_search_frame)
+    sort_controls_frame.pack(side=tk.RIGHT, padx=10)
+    # Label hiển thị chữ "Sắp xếp"
+    sort_label = tk.Label(sort_controls_frame, text="Sắp xếp")
+    sort_label.pack(side=tk.LEFT, padx=5)
+    # Combobox cho phép người dùng chọn thuộc tính cần sắp xếp
+    sort_field_cb = ttk.Combobox(sort_controls_frame, values=list(data.columns), state="readonly", width=20)
+    sort_field_cb.set("Chọn trường")
+    sort_field_cb.pack(side=tk.LEFT, padx=5)
+    # Combobox chọn chiều sắp xếp: Tăng dần hoặc Giảm dần
+    sort_order_cb = ttk.Combobox(sort_controls_frame, values=["Tăng dần", "Giảm dần"], state="readonly", width=10)
+    sort_order_cb.set("Tăng dần")
+    sort_order_cb.pack(side=tk.LEFT, padx=5)
+    # Nút "Sắp xếp"
+    sort_button = tk.Button(sort_controls_frame, text="Sắp xếp", command=handle_sort)
+    sort_button.pack(side=tk.LEFT, padx=5)
     
+    # Tạo các nút lọc
+    filter_controls_frame = tk.Frame(crud_search_frame)
+    filter_controls_frame.pack(side=tk.RIGHT, padx=10)
+    # Label "Lọc"
+    filter_label = tk.Label(filter_controls_frame, text="Lọc")
+    filter_label.pack(side=tk.LEFT, padx=5)
+    # Combobox chọn trường cần lọc
+    filter_field_cb = ttk.Combobox(filter_controls_frame, values=list(data.columns), state="readonly", width=20)
+    filter_field_cb.set("Chọn trường")  # Giá trị mặc định
+    filter_field_cb.pack(side=tk.LEFT, padx=5)
+    # Combobox chọn toán tử (>, <, =, >=, <=)
+    filter_op_cb = ttk.Combobox(filter_controls_frame, values=["=", ">", "<", ">=", "<="], state="readonly", width=5)
+    filter_op_cb.set("=")  # Mặc định là bằng
+    filter_op_cb.pack(side=tk.LEFT, padx=5)
+    # Entry để nhập giá trị lọc
+    filter_value_entry = tk.Entry(filter_controls_frame, width=15)
+    filter_value_entry.pack(side=tk.LEFT, padx=5)
+    # Nút "Lọc"
+    filter_button = tk.Button(filter_controls_frame, text="Lọc", command=handle_filter)
+    filter_button.pack(side=tk.LEFT, padx=5)
+
+
     # Hàm xử lý khi double-click vào một item trong Treeview
     def on_treeview_double_click(event):
         # Lấy item được chọn
@@ -284,8 +368,6 @@ def create_display_window(data, rows_per_page=10):
 
     # Kết nối sự kiện double-click với Treeview
     tree.bind("<Double-1>", on_treeview_double_click)
-
-    
     # Chạy vòng lặp chính của tkinter
     root.mainloop()
     

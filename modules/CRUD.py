@@ -60,3 +60,41 @@ def search(data, field, value):
     filtered_data = data[data[field].astype(str).str.contains(value, case=False, na=False)]
 
     return filtered_data
+
+# Hàm sắp xếp dữ liệu trong file csv
+def sort_data(data, field, ascending=True):
+    if field not in data.columns:
+        raise ValueError("Trường không tồn tại trong dữ liệu.")
+    return data.sort_values(by=field, ascending=ascending)
+
+# Hàm lọc dữ liệu theo điều kiện logic (>, <, =, >=, <=)
+def filter_data(data, field, operator, value):
+    if field not in data.columns:
+        raise ValueError("Trường không tồn tại trong dữ liệu.")
+
+    # Nếu là cột chuỗi (kiểu object), thực hiện so sánh chuỗi
+    if pd.api.types.is_object_dtype(data[field]):
+        if operator == "=":
+            return data[data[field] == value]
+        else:
+            raise ValueError("Chỉ hỗ trợ '=' với dữ liệu dạng chuỗi.")
+    else:
+        try:
+            # Chuyển kiểu số nếu có thể
+            col_data = pd.to_numeric(data[field], errors='coerce')
+            value = float(value)
+
+            if operator == "=":
+                return data[col_data == value]
+            elif operator == ">":
+                return data[col_data > value]
+            elif operator == "<":
+                return data[col_data < value]
+            elif operator == ">=":
+                return data[col_data >= value]
+            elif operator == "<=":
+                return data[col_data <= value]
+            else:
+                raise ValueError("Toán tử không hợp lệ.")
+        except Exception as e:
+            raise ValueError(f"Lỗi khi lọc: {e}")
